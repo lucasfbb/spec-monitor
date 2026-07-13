@@ -13,6 +13,7 @@
 - Auth: super admin por env, sessão httpOnly, gestão de usuários, RBAC admin/membro
 - **API JSON em `/api/*`** (auth/projetos/specs/versões/sync/usuários), CORS + cookie configurável — verificada de ponta a ponta contra o repo real do LitiSense
 - **Frontend React (TanStack Start/Router + Tailwind) em `frontend/`**: dashboard, página do projeto, linha do tempo, diff, login/usuários reais; botões de sync/remover ligados. Sem nenhum acoplamento com Lovable.
+- **Controle de acesso por projeto**: admin vê tudo; usuário comum só os projetos onde foi adicionado como membro (tabela `project_members`, endpoints de membros admin-only, UI de "Membros" na página do projeto). Nav/ações de admin escondidas para não-admin. Testado (isolamento: não-membro nem vê que o projeto existe → 404).
 - UI Jinja original mantida como fallback no backend
 - Webhook GitHub com HMAC (opcional) + polling configurável
 - **Stack de 4 serviços**: caddy + backend + frontend + postgres. CI publica 2 imagens (backend/frontend) no GHCR.

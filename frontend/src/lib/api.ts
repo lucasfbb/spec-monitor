@@ -159,6 +159,19 @@ export const deleteProject = (projectId: string) =>
 export const getSpecDetail = (projectId: string, specId: string) =>
   apiFetch<SpecDetail>(`/projects/${projectId}/specs/${specId}`);
 
+// --- Membros do projeto (admin) ---
+export const listMembers = (projectId: string) =>
+  apiFetch<AdminUser[]>(`/projects/${projectId}/members`);
+
+export const addMember = (projectId: string, userId: string) =>
+  apiFetch<AdminUser>(`/projects/${projectId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+
+export const removeMember = (projectId: string, userId: string) =>
+  apiFetch<void>(`/projects/${projectId}/members/${userId}`, { method: "DELETE" });
+
 // --- Usuários ---
 export const listUsers = () => apiFetch<AdminUser[]>("/users");
 

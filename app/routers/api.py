@@ -14,7 +14,15 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
-from app.models import Project, SpecFile, SpecVersion, StatusSnapshot, SyncLog, User
+from app.models import (
+    Project,
+    ProjectMember,
+    SpecFile,
+    SpecVersion,
+    StatusSnapshot,
+    SyncLog,
+    User,
+)
 from app.security import (
     create_session_token,
     current_user_api,
@@ -107,6 +115,30 @@ def _get_project_or_404(db: Session, project_id: str) -> Project:
     return project
 
 
+def _user_can_access(db: Session, user: User, project: Project) -> bool:
+    """Admin vê tudo; usuário comum só projetos onde é membro."""
+    if user.is_admin:
+        return True
+    return (
+        db.scalar(
+            select(ProjectMember).where(
+                ProjectMember.project_id == project.id,
+                ProjectMember.user_id == user.id,
+            )
+        )
+        is not None
+    )
+
+
+def _project_for_user_or_404(db: Session, project_id: str, user: User) -> Project:
+    """Como _get_project_or_404, mas 404 também quando o usuário não tem acesso
+    (não vaza a existência do projeto para quem não é membro)."""
+    project = _get_project_or_404(db, project_id)
+    if not _user_can_access(db, user, project):
+        raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    return project
+
+
 # --------------------------------------------------------------------------- #
 # Auth
 # --------------------------------------------------------------------------- #
@@ -175,7 +207,11 @@ class ProjectBody(BaseModel):
 
 @router.get("/projects")
 def list_projects(user: User = Depends(current_user_api), db: Session = Depends(get_db)):
-    projects = db.scalars(select(Project).order_by(Project.name)).all()
+    query = select(Project).order_by(Project.name)
+    if not user.is_admin:
+        # Usuário comum: só os projetos em que é membro.
+        query = query.join(ProjectMember).where(ProjectMember.user_id == user.id)
+    projects = db.scalars(query).all()
     return [_project_dict(db, p) for p in projects]
 
 
@@ -183,7 +219,7 @@ def list_projects(user: User = Depends(current_user_api), db: Session = Depends(
 def get_project_detail(
     project_id: str, user: User = Depends(current_user_api), db: Session = Depends(get_db)
 ):
-    project = _get_project_or_404(db, project_id)
+    project = _project_for_user_or_404(db, project_id, user)
     latest_status = db.scalar(
         select(StatusSnapshot)
         .where(StatusSnapshot.project_id == project.id)
@@ -266,6 +302,77 @@ def delete_project(
 
 
 # --------------------------------------------------------------------------- #
+# Membros do projeto (admin) — quem pode ver aquele projeto
+# --------------------------------------------------------------------------- #
+
+
+class MemberBody(BaseModel):
+    userId: str
+
+
+@router.get("/projects/{project_id}/members")
+def list_members(
+    project_id: str, admin: User = Depends(require_admin_api), db: Session = Depends(get_db)
+):
+    project = _get_project_or_404(db, project_id)
+    members = db.scalars(
+        select(User)
+        .join(ProjectMember, ProjectMember.user_id == User.id)
+        .where(ProjectMember.project_id == project.id)
+        .order_by(User.email)
+    ).all()
+    return [_user_dict(u) for u in members]
+
+
+@router.post("/projects/{project_id}/members", status_code=201)
+def add_member(
+    project_id: str,
+    body: MemberBody,
+    admin: User = Depends(require_admin_api),
+    db: Session = Depends(get_db),
+):
+    project = _get_project_or_404(db, project_id)
+    try:
+        uid = int(body.userId)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Usuário inválido") from None
+    target = db.get(User, uid)
+    if target is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    exists = db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project.id, ProjectMember.user_id == uid
+        )
+    )
+    if exists is None:
+        db.add(ProjectMember(project_id=project.id, user_id=uid))
+        db.commit()
+    return _user_dict(target)
+
+
+@router.delete("/projects/{project_id}/members/{user_id}", status_code=204)
+def remove_member(
+    project_id: str,
+    user_id: str,
+    admin: User = Depends(require_admin_api),
+    db: Session = Depends(get_db),
+):
+    project = _get_project_or_404(db, project_id)
+    try:
+        uid = int(user_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Membro não encontrado") from None
+    member = db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project.id, ProjectMember.user_id == uid
+        )
+    )
+    if member is not None:
+        db.delete(member)
+        db.commit()
+
+
+# --------------------------------------------------------------------------- #
 # Specs
 # --------------------------------------------------------------------------- #
 
@@ -277,7 +384,7 @@ def get_spec_detail(
     user: User = Depends(current_user_api),
     db: Session = Depends(get_db),
 ):
-    project = _get_project_or_404(db, project_id)
+    project = _project_for_user_or_404(db, project_id, user)
     try:
         sid = int(spec_id)
     except ValueError:

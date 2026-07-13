@@ -4,7 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { SyncBadge } from "@/components/sync-badge";
 import { Markdown } from "@/components/markdown";
 import { ErrorState, LoadingState } from "@/components/query-states";
-import { deleteProject, getProjectDetail, syncProject } from "@/lib/api";
+import { ProjectMembers } from "@/components/project-members";
+import { deleteProject, getMe, getProjectDetail, syncProject } from "@/lib/api";
 import { formatDate, formatDateTime, formatRelative } from "@/lib/format";
 
 export const Route = createFileRoute("/projects/$projectId")({
@@ -30,6 +31,8 @@ function ProjectPage() {
     queryKey: ["project", projectId],
     queryFn: () => getProjectDetail(projectId),
   });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
+  const isAdmin = me?.role === "admin";
 
   const sync = useMutation({
     mutationFn: () => syncProject(projectId),
@@ -93,7 +96,7 @@ function ProjectPage() {
           </a>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap items-center gap-2 ${isAdmin ? "" : "hidden"}`}>
           <button
             type="button"
             onClick={() => sync.mutate()}
@@ -250,6 +253,8 @@ function ProjectPage() {
               ))}
             </ul>
           </div>
+
+          {isAdmin && <ProjectMembers projectId={projectId} />}
         </aside>
       </div>
     </AppShell>

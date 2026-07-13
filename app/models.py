@@ -42,6 +42,29 @@ class Project(Base):
     sync_logs: Mapped[list["SyncLog"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    members: Mapped[list["ProjectMember"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+
+
+class ProjectMember(Base):
+    """Acesso de um usuário a um projeto (controle de permissão por projeto).
+
+    Admin (is_admin) vê todos os projetos sem precisar de linha aqui; usuário
+    comum só vê os projetos em que tem uma linha. Criação/sync/exclusão de
+    projeto e gestão de membros seguem sendo só do admin.
+    """
+
+    __tablename__ = "project_members"
+    __table_args__ = (UniqueConstraint("project_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    project: Mapped[Project] = relationship(back_populates="members")
+    user: Mapped[User] = relationship()
 
 
 class SpecFile(Base):
