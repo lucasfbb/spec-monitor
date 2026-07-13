@@ -10,7 +10,9 @@ services:
   app:
     image: ghcr.io/lucasfbb/spec-monitor:latest
     ports:
-      - "8000:8000"
+      # host:container — se a porta 8111 do host colidir com outro serviço,
+      # troque o número da esquerda (o da direita é fixo no container).
+      - "8111:8000"
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://specmonitor:${POSTGRES_PASSWORD:?defina no .env}@postgres:5432/specmonitor
