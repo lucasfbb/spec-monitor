@@ -4,22 +4,24 @@
 
 ## Estado
 
-🟡 **v0 construído, aguardando primeiro deploy.** Backend completo (auth + projetos + sync com polling/webhook + linha do tempo + diff), UI server-rendered, testes com GitHub mockado, Docker Compose (dev e prod) e CI com publicação de imagem no GHCR.
+🟢 **Deployado no homelab (backend + Jinja) e agora com frontend novo conectado.** O backend expõe API JSON (`/api/*`) além dos templates Jinja de fallback; o frontend React (gerado no Lovable, hoje sem acoplamento a ele) consome a API via TanStack Query. Caddy junta os dois numa origem só.
 
 ## Feito
 
 - Modelo de dados completo (User, Project, SpecFile, SpecVersion, StatusSnapshot, SyncLog)
 - Motor de sync idempotente por commit_sha, com log por rodada
 - Auth: super admin por env, sessão httpOnly, gestão de usuários, RBAC admin/membro
-- UI: dashboard, página do projeto (STATUS + specs + atividade), linha do tempo por spec, diff entre versões
+- **API JSON em `/api/*`** (auth/projetos/specs/versões/sync/usuários), CORS + cookie configurável — verificada de ponta a ponta contra o repo real do LitiSense
+- **Frontend React (TanStack Start/Router + Tailwind) em `frontend/`**: dashboard, página do projeto, linha do tempo, diff, login/usuários reais; botões de sync/remover ligados. Sem nenhum acoplamento com Lovable.
+- UI Jinja original mantida como fallback no backend
 - Webhook GitHub com HMAC (opcional) + polling configurável
-- Docker (dev/prod), CI (ruff + pytest + build/push GHCR)
+- **Stack de 4 serviços**: caddy + backend + frontend + postgres. CI publica 2 imagens (backend/frontend) no GHCR.
 
 ## Próximos passos
 
-1. Criar repo no GitHub e validar o CI/publicação da imagem
-2. Deploy no homelab (docker-compose.prod.yml) e cadastro do LitiSense
-3. v1 candidatos: notificações de mudança (Telegram/e-mail), parse estruturado do STATUS (tabelas de etapas/decisões), suporte a outras forjas
+1. Rebuild/redeploy no homelab com o stack de 4 serviços (Caddy na 8111) — validar o `docker compose -f docker-compose.prod.yml up` completo (não foi possível rodar Docker no ambiente de dev onde a integração foi feita)
+2. Confirmar cookie/login pelo Caddy em produção (a integração foi validada via proxy do Vite em dev — mesma semântica same-origin)
+3. v1 candidatos: notificações de mudança (Telegram/e-mail), parse estruturado do STATUS, suporte a outras forjas
 
 ## Decisões abertas
 
@@ -27,3 +29,4 @@
 |---|---|---|
 | M1 | Notificações de mudança (canal e gatilhos) | Aberta — v1 |
 | M2 | Criptografia app-level dos tokens no banco | Aberta — necessária se sair do homelab |
+| M3 | SSR do frontend: manter (nitro node-server) ou virar SPA estática | Aberta — hoje SSR; dados são client-side via TanStack Query, então SPA estática seria viável e simplificaria o deploy |

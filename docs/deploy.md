@@ -8,7 +8,7 @@ O fluxo é: **autenticar no GHCR → pegar os arquivos → criar o `.env` → su
 
 ## Passo 1 — Autenticar o servidor no GHCR (a parte que confunde)
 
-A imagem é **privada** (o repo é privado, então o pacote também é). O servidor precisa fazer login no registry do GitHub para baixar.
+O sistema tem **duas imagens** privadas (`spec-monitor-backend` e `spec-monitor-frontend`, publicadas pelo CI). Como o repo é privado, os pacotes também são — o servidor precisa fazer login no registry do GitHub para baixá-las (um login só cobre as duas).
 
 1. No GitHub (pelo navegador, **na sua conta**): **Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)**.
    - Marque **só** o escopo `read:packages`.
@@ -21,13 +21,13 @@ echo "ghp_SEU_TOKEN_AQUI" | docker login ghcr.io -u lucasfbb --password-stdin
 
 Deve responder `Login Succeeded`. Isso fica salvo em `~/.docker/config.json` — você só faz uma vez.
 
-> Esse token é **só para baixar a imagem**. É diferente do token que você vai cadastrar depois no sistema para ler as specs do LitiSense (esse é um fine-grained PAT com `Contents: Read`).
+> Esse token é **só para baixar as imagens**. É diferente do token que você vai cadastrar depois no sistema para ler as specs do LitiSense (esse é um fine-grained PAT com `Contents: Read`).
 
 ---
 
 ## Passo 2 — Pegar os arquivos no servidor
 
-Você só precisa de dois arquivos: `docker-compose.prod.yml` e um `.env`. O jeito mais simples é clonar o repo:
+Você precisa de `docker-compose.prod.yml`, o `Caddyfile` e um `.env`. O jeito mais simples é clonar o repo (já traz os dois primeiros):
 
 ```bash
 git clone https://github.com/lucasfbb/spec-monitor.git
@@ -66,18 +66,18 @@ Preencha:
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Isso baixa a imagem do GHCR, sobe o Postgres, espera ele ficar saudável e sobe a app. Conferir:
+Isso baixa as imagens do GHCR e sobe os quatro serviços: `postgres`, `backend`, `frontend` e `caddy` (o Caddy junta backend + frontend numa origem só e publica na porta 8111 do host). Conferir:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps      # os dois "Up"/"healthy"?
-docker compose -f docker-compose.prod.yml logs -f app   # Ctrl+C para sair
+docker compose -f docker-compose.prod.yml ps          # todos "Up"/"healthy"?
+docker compose -f docker-compose.prod.yml logs -f caddy backend frontend   # Ctrl+C para sair
 ```
 
 ---
 
 ## Passo 5 — Acessar e cadastrar o LitiSense
 
-- Abra `http://IP-DO-SERVIDOR:8111` no navegador.
+- Abra `http://IP-DO-SERVIDOR:8111` no navegador (é o Caddy servindo o frontend + API).
 - Faça login com o `ADMIN_EMAIL`/`ADMIN_PASSWORD` do `.env`.
 - **+ Projeto** → preencha:
   - Nome: `LitiSense`
@@ -91,14 +91,14 @@ Pronto. A partir daí ele se atualiza sozinho a cada `SYNC_INTERVAL_MINUTES`.
 
 ## Atualizar quando sair uma versão nova
 
-Quando eu (ou você) fizer merge de algo na `main`, o CI publica uma imagem nova. Para o servidor pegar:
+Quando eu (ou você) fizer merge de algo na `main`, o CI publica imagens novas (backend e frontend). Para o servidor pegar:
 
 ```bash
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Para automatizar, descomente o serviço `watchtower` no `docker-compose.prod.yml` — ele confere e atualiza a imagem sozinho a cada 5 min.
+Para automatizar, descomente o serviço `watchtower` no `docker-compose.prod.yml` — ele confere e atualiza as imagens sozinho a cada 5 min.
 
 ---
 
@@ -106,8 +106,8 @@ Para automatizar, descomente o serviço `watchtower` no `docker-compose.prod.yml
 
 Nada disso é necessário para usar na sua rede local. Se quiser acessar de fora:
 
-- **Reverse proxy** (Traefik/Caddy/nginx) na frente, terminando TLS, apontando para a porta 8111. Se você já usa um no homelab, é só adicionar mais um host.
-- **Cloudflare Tunnel / Tailscale** — expõe sem abrir porta no roteador. Combina bem com o webhook (abaixo).
+- **Cloudflare Tunnel / Tailscale** — expõe sem abrir porta no roteador; aponte o hostname para `http://localhost:8111` (o Caddy do stack). Combina com o webhook — guia dedicado: [webhook-cloudflare-tunnel.md](webhook-cloudflare-tunnel.md).
+- O TLS é terminado na borda (Cloudflare); o Caddy interno fala HTTP puro, então não precisa de outro reverse proxy na frente.
 
 ## Opcional — Webhook para atualização instantânea
 
@@ -128,7 +128,7 @@ Sem isso, tudo funciona igual — só com até 10 min de atraso.
 | `docker compose pull` dá `denied`/`unauthorized` | Login no GHCR não feito ou token sem `read:packages` (Passo 1) |
 | App reinicia em loop, log fala de `POSTGRES_PASSWORD` | Faltou a linha `POSTGRES_PASSWORD=` no `.env` |
 | Projeto cadastrado mas 0 specs sincronizadas | Token do projeto ausente/sem `Contents: Read` no repo litisense (Passo 5) |
-| `port is already allocated` no `up` | Outro serviço do homelab já usa a porta 8111 do host — troque o `8111:8000` do compose para outra porta livre (ex.: `8222:8000`) |
+| `port is already allocated` no `up` | Outro serviço do homelab já usa a porta 8111 do host — troque o `8111:80` do serviço `caddy` no compose para outra porta livre (ex.: `8222:80`) |
 | Não abre no navegador | Firewall do servidor bloqueando a porta 8111, ou IP errado |
 
-Logs sempre em: `docker compose -f docker-compose.prod.yml logs -f app`.
+Logs sempre em: `docker compose -f docker-compose.prod.yml logs -f caddy backend frontend`.

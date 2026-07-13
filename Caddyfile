@@ -1,0 +1,21 @@
+# Reverse proxy que junta frontend + API numa origem só.
+# Assim o browser fala com um host só: cookies ficam first-party (sem CORS,
+# sem SameSite=None). No homelab, aponte um hostname do Cloudflare Tunnel
+# para a porta publicada deste Caddy (ver docs/deploy.md).
+#
+# :80 interno — o TLS é terminado pelo Cloudflare na borda.
+:80 {
+	# API JSON e o endpoint de webhook do GitHub vão para o backend FastAPI.
+	# (o webhook é /webhooks/github, fora de /api — precisa estar aqui também.)
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /webhooks/* {
+		reverse_proxy backend:8000
+	}
+
+	# O resto (SPA + SSR) vai para o servidor do frontend.
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

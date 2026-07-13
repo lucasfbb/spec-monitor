@@ -1,0 +1,257 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-diff-add: var(--diff-add);
+  --color-diff-add-fg: var(--diff-add-fg);
+  --color-diff-del: var(--diff-del);
+  --color-diff-del-fg: var(--diff-del-fg);
+}
+
+/*
+ * Dark by default — this is a dev tooling command center.
+ * Background: near-black with a subtle blue tint.
+ * Accent: electric blue for links/primary actions.
+ */
+:root,
+.dark {
+  --radius: 0.5rem;
+
+  --background: oklch(0.16 0.015 260);
+  --foreground: oklch(0.96 0.005 260);
+
+  --card: oklch(0.19 0.017 260);
+  --card-foreground: oklch(0.96 0.005 260);
+
+  --popover: oklch(0.19 0.017 260);
+  --popover-foreground: oklch(0.96 0.005 260);
+
+  --primary: oklch(0.68 0.19 250);
+  --primary-foreground: oklch(0.15 0.02 260);
+
+  --secondary: oklch(0.24 0.018 260);
+  --secondary-foreground: oklch(0.96 0.005 260);
+
+  --muted: oklch(0.23 0.015 260);
+  --muted-foreground: oklch(0.66 0.015 260);
+
+  --accent: oklch(0.28 0.03 255);
+  --accent-foreground: oklch(0.96 0.005 260);
+
+  --destructive: oklch(0.62 0.21 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --success: oklch(0.68 0.16 155);
+  --success-foreground: oklch(0.14 0.02 160);
+
+  --warning: oklch(0.78 0.15 82);
+  --warning-foreground: oklch(0.2 0.02 82);
+
+  --border: oklch(0.27 0.018 260);
+  --input: oklch(0.24 0.018 260);
+  --ring: oklch(0.68 0.19 250);
+
+  --diff-add: oklch(0.32 0.09 155 / 0.35);
+  --diff-add-fg: oklch(0.9 0.12 155);
+  --diff-del: oklch(0.32 0.12 25 / 0.35);
+  --diff-del-fg: oklch(0.85 0.15 25);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Markdown prose — sober, dev-tooling styling */
+@utility prose-spec {
+  color: var(--color-foreground);
+  font-size: 0.95rem;
+  line-height: 1.65;
+
+  & h1,
+  & h2,
+  & h3,
+  & h4 {
+    color: var(--color-foreground);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+  & h1 {
+    font-size: 1.6rem;
+    margin: 1.5rem 0 0.9rem;
+  }
+  & h2 {
+    font-size: 1.25rem;
+    margin: 1.9rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  & h3 {
+    font-size: 1.05rem;
+    margin: 1.4rem 0 0.5rem;
+  }
+  & h4 {
+    font-size: 0.95rem;
+    margin: 1.1rem 0 0.4rem;
+    color: var(--color-muted-foreground);
+  }
+
+  & p {
+    margin: 0.7rem 0;
+  }
+  & ul,
+  & ol {
+    margin: 0.7rem 0;
+    padding-left: 1.4rem;
+  }
+  & li {
+    margin: 0.25rem 0;
+  }
+  & li::marker {
+    color: var(--color-muted-foreground);
+  }
+
+  & a {
+    color: var(--color-primary);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+  }
+  & a:hover {
+    border-bottom-color: var(--color-primary);
+  }
+
+  & strong {
+    color: var(--color-foreground);
+    font-weight: 600;
+  }
+
+  & code {
+    font-size: 0.85em;
+    background: var(--color-muted);
+    color: var(--color-foreground);
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+  }
+
+  & pre {
+    background: oklch(0.13 0.015 260);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    margin: 1rem 0;
+  }
+  & pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  & blockquote {
+    border-left: 3px solid var(--color-primary);
+    padding: 0.2rem 0 0.2rem 1rem;
+    margin: 1rem 0;
+    color: var(--color-muted-foreground);
+    background: color-mix(in oklab, var(--color-primary) 6%, transparent);
+    border-radius: 0 6px 6px 0;
+  }
+
+  & hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 1.6rem 0;
+  }
+
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  & thead {
+    background: var(--color-muted);
+  }
+  & th,
+  & td {
+    text-align: left;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+  & th {
+    font-weight: 600;
+    color: var(--color-foreground);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  & tbody tr:last-child td {
+    border-bottom: none;
+  }
+  & tbody tr:hover {
+    background: color-mix(in oklab, var(--color-primary) 4%, transparent);
+  }
+}
