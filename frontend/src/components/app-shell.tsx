@@ -44,7 +44,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav: Array<{ to: string; label: string; match: (p: string) => boolean }> = [
     { to: "/", label: "Projetos", match: (p) => p === "/" || p.startsWith("/projects") },
-    { to: "/users", label: "Usuários", match: (p) => p.startsWith("/users") },
+    // Gestão de usuários é só para admin.
+    ...(me?.role === "admin"
+      ? [{ to: "/users", label: "Usuários", match: (p: string) => p.startsWith("/users") }]
+      : []),
   ];
 
   return (

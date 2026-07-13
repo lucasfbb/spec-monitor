@@ -26,6 +26,6 @@ Monitor de specs/STATUS de projetos spec-driven (irmão do LitiSense), para home
 2. Snapshots são **imutáveis**: nunca editar `SpecVersion`/`StatusSnapshot` existentes; correção = nova sincronização.
 3. Sync é **idempotente** (chave por commit_sha) — qualquer mudança no motor mantém isso testado.
 4. Acesso ao GitHub só via `github_client.py`; tokens só de leitura (`Contents: Read`), nunca logados.
-5. Rotas de mutação exigem admin (`require_admin`); visualização exige login.
+5. Rotas de mutação exigem admin (`require_admin`); visualização exige login. **Acesso por projeto:** admin vê todos; usuário comum só os projetos onde é membro (tabela `project_members`). Endpoints de projeto/spec filtram/404 por acesso (`_project_for_user_or_404` em `routers/api.py`); gestão de membros é admin-only.
 6. Login não distingue "usuário não existe" de "senha errada".
 7. Segredos nunca no repo; `.env.example` com placeholders.

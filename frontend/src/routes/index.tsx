@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { SyncBadge } from "@/components/sync-badge";
 import { ErrorState, LoadingState } from "@/components/query-states";
-import { listProjects } from "@/lib/api";
+import { getMe, listProjects } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
@@ -29,6 +29,8 @@ function Dashboard() {
     queryKey: ["projects"],
     queryFn: listProjects,
   });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
+  const isAdmin = me?.role === "admin";
 
   if (isLoading) {
     return (
@@ -68,12 +70,14 @@ function Dashboard() {
             )}
           </p>
         </div>
-        <Link
-          to="/projects/new"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          <span className="text-base leading-none">+</span> Novo projeto
-        </Link>
+        {isAdmin && (
+          <Link
+            to="/projects/new"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <span className="text-base leading-none">+</span> Novo projeto
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,18 +117,20 @@ function Dashboard() {
           </Link>
         ))}
 
-        <Link
-          to="/projects/new"
-          className="flex min-h-[172px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/30 p-5 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-card hover:text-foreground"
-        >
-          <div className="grid h-10 w-10 place-items-center rounded-full border border-dashed border-current text-xl">
-            +
-          </div>
-          <div className="mt-3 text-sm font-medium">Adicionar projeto</div>
-          <div className="mt-1 font-mono text-[11px] uppercase tracking-widest">
-            conectar repo do github
-          </div>
-        </Link>
+        {isAdmin && (
+          <Link
+            to="/projects/new"
+            className="flex min-h-[172px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/30 p-5 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-card hover:text-foreground"
+          >
+            <div className="grid h-10 w-10 place-items-center rounded-full border border-dashed border-current text-xl">
+              +
+            </div>
+            <div className="mt-3 text-sm font-medium">Adicionar projeto</div>
+            <div className="mt-1 font-mono text-[11px] uppercase tracking-widest">
+              conectar repo do github
+            </div>
+          </Link>
+        )}
       </div>
     </AppShell>
   );
