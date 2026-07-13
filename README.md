@@ -40,7 +40,7 @@ Testes e lint: `pytest -q` e `ruff check app tests`.
 2. Clone o repo (ou copie `docker-compose.prod.yml` + `.env`), preencha o `.env` (inclua `POSTGRES_PASSWORD`).
 3. `docker compose -f docker-compose.prod.yml up -d`.
 4. Acesse `http://IP:8111`, login como admin, cadastre o projeto com um fine-grained PAT (`Contents: Read`).
-5. Atualizações: `docker compose pull && up -d` (ou watchtower). Webhook é opcional (o polling já cobre).
+5. Atualizações: `docker compose pull && up -d` (ou watchtower). Webhook é opcional (o polling já cobre) — guia completo com Cloudflare Tunnel: [docs/webhook-cloudflare-tunnel.md](docs/webhook-cloudflare-tunnel.md).
 
 ## Documentação
 
