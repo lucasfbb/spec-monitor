@@ -1,13 +1,14 @@
 # Homelab: usa a imagem publicada pelo CI no GHCR (sem build no servidor).
-#   1. Crie o .env (copie do .env.example e preencha)
-#   2. Ajuste a imagem para o seu usuário/repo do GitHub
+# Guia completo: docs/deploy.md
+#   1. docker login ghcr.io (imagem privada — PAT com read:packages)
+#   2. Crie o .env (copie do .env.example e preencha, inclusive POSTGRES_PASSWORD)
 #   3. docker compose -f docker-compose.prod.yml up -d
 #
 # Atualização automática: descomente o serviço watchtower no fim do arquivo,
 # ou rode `docker compose -f docker-compose.prod.yml pull && up -d` quando quiser.
 services:
   app:
-    image: ghcr.io/SEU-USUARIO/spec-monitor:latest
+    image: ghcr.io/lucasfbb/spec-monitor:latest
     ports:
       - "8000:8000"
     env_file: .env

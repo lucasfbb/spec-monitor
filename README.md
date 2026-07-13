@@ -34,10 +34,13 @@ Testes e lint: `pytest -q` e `ruff check app tests`.
 
 ## Deploy no homelab
 
-1. CI publica a imagem em `ghcr.io/<seu-usuario>/spec-monitor` a cada merge na `main`.
-2. No servidor: copie `docker-compose.prod.yml` e um `.env` preenchido (inclua `POSTGRES_PASSWORD`), ajuste o nome da imagem, e `docker compose -f docker-compose.prod.yml up -d`.
-3. Atualizações: `docker compose pull && docker compose up -d` (ou descomente o watchtower no compose).
-4. Webhook (opcional): exponha `/webhooks/github` (Cloudflare Tunnel/Tailscale Funnel), configure o webhook de push no repo com o mesmo segredo do `.env`.
+**Guia passo a passo completo: [docs/deploy.md](docs/deploy.md).** Em resumo:
+
+1. `docker login ghcr.io` no servidor (imagem privada — PAT com `read:packages`).
+2. Clone o repo (ou copie `docker-compose.prod.yml` + `.env`), preencha o `.env` (inclua `POSTGRES_PASSWORD`).
+3. `docker compose -f docker-compose.prod.yml up -d`.
+4. Acesse `http://IP:8000`, login como admin, cadastre o projeto com um fine-grained PAT (`Contents: Read`).
+5. Atualizações: `docker compose pull && up -d` (ou watchtower). Webhook é opcional (o polling já cobre).
 
 ## Documentação
 
