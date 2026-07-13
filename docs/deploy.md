@@ -91,14 +91,26 @@ Pronto. A partir daí ele se atualiza sozinho a cada `SYNC_INTERVAL_MINUTES`.
 
 ## Atualizar quando sair uma versão nova
 
-Quando eu (ou você) fizer merge de algo na `main`, o CI publica imagens novas (backend e frontend). Para o servidor pegar:
+Quando eu (ou você) fizer merge de algo na `main`, o CI publica imagens novas (backend e frontend) no GHCR. **O `up -d` NÃO baixa versão nova sozinho** — merge publica no registry, não no servidor.
+
+**Automático (watchtower — já vem ligado no compose):** o serviço `watchtower` confere o GHCR a cada 5 min e, quando aparece imagem nova de backend/frontend, puxa e recria só esses containers. Você não faz nada. Ele age **apenas** nos serviços do spec-monitor (escopo por label) — não encosta nos seus outros containers do homelab.
+
+Pré-requisito da parte automática: o watchtower precisa do seu login no GHCR para baixar as imagens privadas. Ele lê o `config.json` do `docker login` que você fez no Passo 1. Se você usa `sudo docker` (login em `/root/.docker`), defina no `.env`:
+
+```
+DOCKER_CONFIG_DIR=/root/.docker
+```
+
+Conferir se está atualizando: `docker compose -f docker-compose.prod.yml logs -f watchtower`.
+
+**Manual (quando quiser forçar na hora, sem esperar os 5 min):**
 
 ```bash
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Para automatizar, descomente o serviço `watchtower` no `docker-compose.prod.yml` — ele confere e atualiza as imagens sozinho a cada 5 min.
+> Não quer atualização automática? Comente o serviço `watchtower` no compose e use só o comando manual acima.
 
 ---
 

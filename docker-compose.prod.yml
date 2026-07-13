@@ -29,12 +29,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    labels:
+      # Só serviços com este label são atualizados pelo watchtower (abaixo).
+      - "com.centurylinklabs.watchtower.enable=true"
     restart: unless-stopped
 
   frontend:
     image: ghcr.io/lucasfbb/spec-monitor-frontend:latest
     depends_on:
       - backend
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     restart: unless-stopped
 
   postgres:
@@ -52,11 +57,21 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # watchtower:
-  #   image: containrrr/watchtower
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   command: --interval 300
+  # Atualização automática: confere o GHCR a cada 5 min e, se houver imagem
+  # nova de backend/frontend, puxa e recria só esses containers.
+  #   --label-enable  → age SÓ nos serviços com o label watchtower.enable=true
+  #                     (não toca nos seus outros containers do homelab).
+  #   --cleanup       → remove a imagem antiga após atualizar (economiza disco).
+  # Auth no GHCR (imagens privadas): monta o config.json do seu `docker login`.
+  # Ajuste DOCKER_CONFIG_DIR no .env se o login estiver em /root/.docker
+  # (ex.: se você usa `sudo docker`). Default: ~/.docker do usuário atual.
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_CONFIG_DIR:-~/.docker}/config.json:/config.json:ro
+    command: --label-enable --cleanup --interval 300
+    restart: unless-stopped
 
 volumes:
   pgdata:
