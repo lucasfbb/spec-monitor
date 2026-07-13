@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}spec-monitor{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">🛰️ spec-monitor</a>
+    {% if user %}
+    <nav>
+      {% if user.is_admin %}
+      <a href="/projetos/novo">+ Projeto</a>
+      <a href="/admin/usuarios">Usuários</a>
+      {% endif %}
+      <form method="post" action="/logout" class="inline">
+        <button class="link" type="submit">Sair ({{ user.email }})</button>
+      </form>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

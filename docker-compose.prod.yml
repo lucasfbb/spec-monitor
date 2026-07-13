@@ -1,0 +1,43 @@
+# Homelab: usa a imagem publicada pelo CI no GHCR (sem build no servidor).
+#   1. Crie o .env (copie do .env.example e preencha)
+#   2. Ajuste a imagem para o seu usuário/repo do GitHub
+#   3. docker compose -f docker-compose.prod.yml up -d
+#
+# Atualização automática: descomente o serviço watchtower no fim do arquivo,
+# ou rode `docker compose -f docker-compose.prod.yml pull && up -d` quando quiser.
+services:
+  app:
+    image: ghcr.io/SEU-USUARIO/spec-monitor:latest
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://specmonitor:${POSTGRES_PASSWORD:?defina no .env}@postgres:5432/specmonitor
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: specmonitor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: specmonitor
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U specmonitor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: --interval 300 spec-monitor-app-1
+
+volumes:
+  pgdata:

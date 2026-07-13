@@ -1,0 +1,22 @@
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Dados locais (SQLite de dev)
+data/
+
+# IDE / SO
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store

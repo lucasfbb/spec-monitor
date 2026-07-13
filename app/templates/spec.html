@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ spec.title or spec.path }} — spec-monitor{% endblock %}
+{% block content %}
+<p><a href="/projetos/{{ project.id }}">← {{ project.name }}</a></p>
+<div class="page-head">
+  <div>
+    <h1>{{ spec.title or spec.path }}</h1>
+    <p class="muted"><code>{{ spec.path }}</code></p>
+  </div>
+</div>
+
+<div class="columns">
+  <section class="card">
+    {% if selected %}
+    <h2>Versão de {{ selected.commit_date.strftime("%d/%m/%Y %H:%M") }} <code>{{ selected.commit_sha[:8] }}</code></h2>
+    <p class="muted">{{ selected.commit_message }}{% if selected.author %} · {{ selected.author }}{% endif %}</p>
+    <article class="markdown">{{ content_html | safe }}</article>
+    {% else %}
+    <p class="muted">Nenhuma versão sincronizada ainda.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Linha do tempo ({{ versions | length }} versões)</h2>
+    <ul class="timeline">
+      {% for v in versions %}
+      <li class="{{ 'current' if selected and v.id == selected.id }}">
+        <span class="muted">{{ v.commit_date.strftime("%d/%m/%Y %H:%M") }}</span>
+        <a href="/projetos/{{ project.id }}/specs/{{ spec.id }}?versao={{ v.id }}">{{ v.commit_sha[:8] }}</a>
+        <span class="muted">— {{ v.commit_message }}</span>
+        {% if not loop.last %}
+        · <a class="small" href="/projetos/{{ project.id }}/specs/{{ spec.id }}/diff?de={{ versions[loop.index].id }}&para={{ v.id }}">diff ↧</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

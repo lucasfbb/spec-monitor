@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Projetos — spec-monitor{% endblock %}
+{% block content %}
+<h1>Projetos monitorados</h1>
+{% if not cards %}
+<p class="muted">Nenhum projeto ainda.{% if user.is_admin %} <a href="/projetos/novo">Cadastre o primeiro</a>.{% endif %}</p>
+{% endif %}
+<div class="grid">
+  {% for c in cards %}
+  <a class="card project-card" href="/projetos/{{ c.project.id }}">
+    <h2>{{ c.project.name }}</h2>
+    <p class="muted">{{ c.project.repo }} · {{ c.project.branch }}</p>
+    <p>{{ c.specs_count }} spec(s)</p>
+    {% if c.last_activity %}<p class="muted">Última atividade: {{ c.last_activity.strftime("%d/%m/%Y %H:%M") }}</p>{% endif %}
+    {% if c.last_log %}
+      <span class="badge {{ 'ok' if c.last_log.ok else 'fail' }}">
+        {{ 'sync ok' if c.last_log.ok else 'sync falhou' }} · {{ c.last_log.started_at.strftime("%d/%m %H:%M") }}
+      </span>
+    {% else %}
+      <span class="badge">nunca sincronizado</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

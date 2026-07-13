@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Novo projeto — spec-monitor{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Novo projeto</h1>
+  {% if erro %}<p class="error">{{ erro }}</p>{% endif %}
+  <form method="post" action="/projetos/novo">
+    <label>Nome <input name="name" required placeholder="LitiSense"></label>
+    <label>Repositório <input name="repo" required placeholder="dono/repo ou URL do GitHub"></label>
+    <label>Branch <input name="branch" value="main"></label>
+    <label>Pasta de specs <input name="specs_dir" value="specs"></label>
+    <label>Arquivo de status <input name="status_path" value="STATUS.md"></label>
+    <label>Token (repo privado — fine-grained PAT, Contents: Read)
+      <input name="token" type="password" placeholder="opcional para repo público">
+    </label>
+    <button type="submit">Cadastrar e sincronizar</button>
+  </form>
+</div>
+{% endblock %}

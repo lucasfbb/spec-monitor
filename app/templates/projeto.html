@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — spec-monitor{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ project.name }}</h1>
+    <p class="muted">
+      <a href="https://github.com/{{ project.repo }}" target="_blank" rel="noopener">{{ project.repo }}</a>
+      · {{ project.branch }} · specs em <code>{{ project.specs_dir }}/</code>
+    </p>
+    {% if last_log %}
+    <span class="badge {{ 'ok' if last_log.ok else 'fail' }}">
+      último sync: {{ last_log.started_at.strftime("%d/%m/%Y %H:%M") }} — {{ last_log.message }}
+    </span>
+    {% endif %}
+  </div>
+  {% if user.is_admin %}
+  <div class="actions">
+    <form method="post" action="/projetos/{{ project.id }}/sync" class="inline">
+      <button type="submit">Sincronizar agora</button>
+    </form>
+    <form method="post" action="/projetos/{{ project.id }}/excluir" class="inline"
+          onsubmit="return confirm('Remover o projeto e todo o histórico monitorado?');">
+      <button type="submit" class="danger">Remover</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="columns">
+  <section class="card">
+    <h2>Estado da arte (STATUS)</h2>
+    {% if status_html %}
+      <p class="muted">Snapshot de {{ latest_status.commit_date.strftime("%d/%m/%Y %H:%M") }} · <code>{{ latest_status.commit_sha[:8] }}</code></p>
+      <article class="markdown">{{ status_html | safe }}</article>
+    {% else %}
+      <p class="muted">Nenhum {{ project.status_path }} encontrado ainda.</p>
+    {% endif %}
+  </section>
+
+  <div>
+    <section class="card">
+      <h2>Specs ({{ specs | length }})</h2>
+      <table>
+        <thead><tr><th>Spec</th><th>Atualizada em</th><th>Versões</th></tr></thead>
+        <tbody>
+        {% for s in specs %}
+          <tr>
+            <td><a href="/projetos/{{ project.id }}/specs/{{ s.id }}">{{ s.title or s.path }}</a><br><span class="muted small">{{ s.path }}</span></td>
+            <td>{% if s.last_updated %}{{ s.last_updated.strftime("%d/%m/%Y") }}{% endif %}</td>
+            <td>{{ s.versions | length }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Linha do tempo (últimas alterações)</h2>
+      <ul class="timeline">
+        {% for v in activity %}
+        <li>
+          <span class="muted">{{ v.commit_date.strftime("%d/%m %H:%M") }}</span>
+          <a href="/projetos/{{ project.id }}/specs/{{ v.spec_file_id }}?versao={{ v.id }}">{{ v.spec_file.title or v.spec_file.path }}</a>
+          <span class="muted">— {{ v.commit_message }}{% if v.author %} · {{ v.author }}{% endif %}</span>
+        </li>
+        {% else %}
+        <li class="muted">Sem atividade registrada.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+{% endblock %}

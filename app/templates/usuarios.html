@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Usuários — spec-monitor{% endblock %}
+{% block content %}
+<h1>Usuários</h1>
+{% if erro %}<p class="error">{{ erro }}</p>{% endif %}
+<div class="columns">
+  <section class="card">
+    <table>
+      <thead><tr><th>E-mail</th><th>Papel</th><th>Desde</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td>{{ u.email }}</td>
+          <td>{% if u.is_admin %}<span class="badge ok">admin</span>{% else %}membro{% endif %}</td>
+          <td>{{ u.created_at.strftime("%d/%m/%Y") }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card narrow">
+    <h2>Novo usuário</h2>
+    <form method="post" action="/admin/usuarios">
+      <label>E-mail <input type="email" name="email" required></label>
+      <label>Senha <input type="password" name="password" required minlength="8"></label>
+      <label class="checkbox"><input type="checkbox" name="is_admin" value="true"> Administrador</label>
+      <button type="submit">Criar</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

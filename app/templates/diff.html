@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Diff — {{ spec.title or spec.path }}{% endblock %}
+{% block content %}
+<p><a href="/projetos/{{ project.id }}/specs/{{ spec.id }}">← {{ spec.title or spec.path }}</a></p>
+<h1>Diff</h1>
+<p class="muted">
+  De <code>{{ old.commit_sha[:8] }}</code> ({{ old.commit_date.strftime("%d/%m/%Y %H:%M") }})
+  para <code>{{ new.commit_sha[:8] }}</code> ({{ new.commit_date.strftime("%d/%m/%Y %H:%M") }})
+</p>
+<div class="card">
+<pre class="diff">{% for l in lines %}<span class="{{ l.kind }}">{{ l.text }}</span>
+{% endfor %}</pre>
+</div>
+{% endblock %}
