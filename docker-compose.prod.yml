@@ -1,24 +1,40 @@
-# Homelab: usa a imagem publicada pelo CI no GHCR (sem build no servidor).
+# Homelab: usa as imagens publicadas pelo CI no GHCR (sem build no servidor).
 # Guia completo: docs/deploy.md
-#   1. docker login ghcr.io (imagem privada — PAT com read:packages)
+#   1. docker login ghcr.io (imagens privadas — PAT com read:packages)
 #   2. Crie o .env (copie do .env.example e preencha, inclusive POSTGRES_PASSWORD)
 #   3. docker compose -f docker-compose.prod.yml up -d
+#   4. Aponte um hostname do Cloudflare Tunnel para http://localhost:8111
+#      (o Caddy junta frontend + API numa origem só — ver docs/webhook e deploy).
 #
-# Atualização automática: descomente o serviço watchtower no fim do arquivo,
-# ou rode `docker compose -f docker-compose.prod.yml pull && up -d` quando quiser.
+# Atualização: docker compose -f docker-compose.prod.yml pull && up -d
+# (ou descomente o watchtower no fim do arquivo).
 services:
-  app:
-    image: ghcr.io/lucasfbb/spec-monitor:latest
+  caddy:
+    image: caddy:2-alpine
     ports:
-      # host:container — se a porta 8111 do host colidir com outro serviço,
-      # troque o número da esquerda (o da direita é fixo no container).
-      - "8111:8000"
+      # host:container — troque a 8111 se colidir com outro serviço do homelab.
+      - "8111:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/lucasfbb/spec-monitor-backend:latest
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://specmonitor:${POSTGRES_PASSWORD:?defina no .env}@postgres:5432/specmonitor
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/lucasfbb/spec-monitor-frontend:latest
+    depends_on:
+      - backend
     restart: unless-stopped
 
   postgres:
@@ -40,7 +56,7 @@ services:
   #   image: containrrr/watchtower
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
-  #   command: --interval 300 spec-monitor-app-1
+  #   command: --interval 300
 
 volumes:
   pgdata:

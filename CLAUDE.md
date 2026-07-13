@@ -6,8 +6,14 @@ Monitor de specs/STATUS de projetos spec-driven (irmão do LitiSense), para home
 
 - `specs/00-visao-e-arquitetura.md` — fonte de verdade técnica; leia antes de implementar.
 - `STATUS.md` — estado atual.
-- `app/` — FastAPI monolito: `sync.py` (motor), `github_client.py` (única fronteira com a API do GitHub), `routers/` (auth, ui, webhook), `templates/` + `static/` (UI server-rendered).
-- `tests/` — pytest; GitHub sempre mockado com respx (nenhum teste bate na API real).
+- `app/` — FastAPI: `sync.py` (motor), `github_client.py` (única fronteira com a API do GitHub), `routers/` (`api` = API JSON consumida pelo frontend, `auth`/`ui` = Jinja de fallback, `webhook`), `templates/` + `static/`.
+- `frontend/` — SPA React 19 + TanStack Start/Router + Tailwind (gerada no Lovable, **sem acoplamento a ele** — não reintroduza `@lovable.dev/*` nem arquivos de error-reporting do Lovable). Dados só via `src/lib/api.ts` (cliente da API + TanStack Query); nenhum componente inventa número.
+- `Caddyfile` — junta frontend + `/api/*` + `/webhooks/*` numa origem só (cookie first-party). `tests/` — pytest; GitHub sempre mockado com respx.
+
+## Arquitetura de dados (front↔back)
+
+- O frontend nunca importa mock; consome `/api/*`. Formatos em camelCase batem 1:1 com os tipos de `frontend/src/lib/api.ts` e são produzidos em `app/routers/api.py`.
+- Auth: cookie de sessão httpOnly; em dev o proxy do Vite (`frontend/vite.config.ts`) deixa `/api` same-origin; em prod o Caddy faz o mesmo. Deps de auth da API retornam 401/403 (não redirect).
 
 ## Convenções (mesmas do LitiSense)
 

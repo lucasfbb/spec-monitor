@@ -61,3 +61,21 @@ def require_admin(user: User = Depends(current_user)) -> User:
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Apenas administradores")
     return user
+
+
+# --- Variantes para a API JSON: 401/403 em vez de redirect para /login ---
+
+
+def current_user_api(request: Request, db: Session = Depends(get_db)) -> User:
+    token = request.cookies.get(get_settings().session_cookie_name)
+    user_id = read_session_token(token) if token else None
+    user = db.get(User, user_id) if user_id is not None else None
+    if user is None:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+    return user
+
+
+def require_admin_api(user: User = Depends(current_user_api)) -> User:
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Apenas administradores")
+    return user

@@ -1,15 +1,39 @@
-# Dev / build local: docker compose up --build
+# Build/execução local do stack completo: docker compose up --build
+# Acesse via Caddy em http://localhost:8080 (frontend + API na mesma origem).
+#
+# Para desenvolvimento com hot reload, prefira rodar fora do Docker:
+#   backend:  uvicorn app.main:app --reload         (porta 8000)
+#   frontend: cd frontend && npm run dev            (porta 3000, com proxy /api)
 services:
-  app:
-    build: .
+  caddy:
+    image: caddy:2-alpine
     ports:
-      - "8000:8000"
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  backend:
+    build: .
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://specmonitor:specmonitor@postgres:5432/specmonitor
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      # VITE_API_URL vazio = chamadas relativas /api, resolvidas pelo Caddy.
+      args:
+        VITE_API_URL: ""
+    depends_on:
+      - backend
     restart: unless-stopped
 
   postgres:
