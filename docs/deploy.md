@@ -77,7 +77,7 @@ docker compose -f docker-compose.prod.yml logs -f app   # Ctrl+C para sair
 
 ## Passo 5 — Acessar e cadastrar o LitiSense
 
-- Abra `http://IP-DO-SERVIDOR:8000` no navegador.
+- Abra `http://IP-DO-SERVIDOR:8111` no navegador.
 - Faça login com o `ADMIN_EMAIL`/`ADMIN_PASSWORD` do `.env`.
 - **+ Projeto** → preencha:
   - Nome: `LitiSense`
@@ -106,7 +106,7 @@ Para automatizar, descomente o serviço `watchtower` no `docker-compose.prod.yml
 
 Nada disso é necessário para usar na sua rede local. Se quiser acessar de fora:
 
-- **Reverse proxy** (Traefik/Caddy/nginx) na frente, terminando TLS, apontando para a porta 8000. Se você já usa um no homelab, é só adicionar mais um host.
+- **Reverse proxy** (Traefik/Caddy/nginx) na frente, terminando TLS, apontando para a porta 8111. Se você já usa um no homelab, é só adicionar mais um host.
 - **Cloudflare Tunnel / Tailscale** — expõe sem abrir porta no roteador. Combina bem com o webhook (abaixo).
 
 ## Opcional — Webhook para atualização instantânea
@@ -128,6 +128,7 @@ Sem isso, tudo funciona igual — só com até 10 min de atraso.
 | `docker compose pull` dá `denied`/`unauthorized` | Login no GHCR não feito ou token sem `read:packages` (Passo 1) |
 | App reinicia em loop, log fala de `POSTGRES_PASSWORD` | Faltou a linha `POSTGRES_PASSWORD=` no `.env` |
 | Projeto cadastrado mas 0 specs sincronizadas | Token do projeto ausente/sem `Contents: Read` no repo litisense (Passo 5) |
-| Não abre no navegador | Firewall do servidor bloqueando a porta 8000, ou IP errado |
+| `port is already allocated` no `up` | Outro serviço do homelab já usa a porta 8111 do host — troque o `8111:8000` do compose para outra porta livre (ex.: `8222:8000`) |
+| Não abre no navegador | Firewall do servidor bloqueando a porta 8111, ou IP errado |
 
 Logs sempre em: `docker compose -f docker-compose.prod.yml logs -f app`.
