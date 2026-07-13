@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { SyncBadge } from "@/components/sync-badge";
 import { Markdown } from "@/components/markdown";
 import { ErrorState, LoadingState } from "@/components/query-states";
 import { ProjectMembers } from "@/components/project-members";
+import { SpecViewerModal } from "@/components/spec-viewer-modal";
 import { deleteProject, getMe, getProjectDetail, syncProject } from "@/lib/api";
 import { formatDate, formatDateTime, formatRelative } from "@/lib/format";
 
@@ -33,6 +35,7 @@ function ProjectPage() {
   });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
   const isAdmin = me?.role === "admin";
+  const [openSpec, setOpenSpec] = useState<string | null>(null);
 
   const sync = useMutation({
     mutationFn: () => syncProject(projectId),
@@ -199,10 +202,10 @@ function ProjectPage() {
             <ul className="max-h-[480px] overflow-y-auto">
               {specs.map((s) => (
                 <li key={s.id} className="border-b border-border last:border-b-0">
-                  <Link
-                    to="/projects/$projectId/specs/$specId"
-                    params={{ projectId: project.id, specId: s.id }}
-                    className="group flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50"
+                  <button
+                    type="button"
+                    onClick={() => setOpenSpec(s.id)}
+                    className="group flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-accent/50"
                   >
                     <span className="mt-0.5 font-mono text-xs text-muted-foreground">{s.id}</span>
                     <div className="min-w-0 flex-1">
@@ -215,7 +218,7 @@ function ProjectPage() {
                         <span className="font-mono">{s.versionsCount} ver</span>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -257,6 +260,8 @@ function ProjectPage() {
           {isAdmin && <ProjectMembers projectId={projectId} />}
         </aside>
       </div>
+
+      <SpecViewerModal projectId={projectId} specId={openSpec} onClose={() => setOpenSpec(null)} />
     </AppShell>
   );
 }
