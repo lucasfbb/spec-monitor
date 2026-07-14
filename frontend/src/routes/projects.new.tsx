@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { AppShell } from "@/components/app-shell";
 import { ApiError, createProject } from "@/lib/api";
 
 export const Route = createFileRoute("/projects/new")({
