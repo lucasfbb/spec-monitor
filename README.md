@@ -50,7 +50,7 @@ Testes/lint: `pytest -q` + `ruff check app tests` (backend); `npm run lint` + `n
 2. Clone o repo (ou copie `docker-compose.prod.yml` + `Caddyfile` + `.env`), preencha o `.env` (inclua `POSTGRES_PASSWORD`).
 3. `docker compose -f docker-compose.prod.yml up -d` (sobe backend + frontend + caddy + postgres).
 4. Aponte um hostname do Cloudflare Tunnel para `http://localhost:8111` (o Caddy), acesse, login como admin, cadastre o projeto com um fine-grained PAT (`Contents: Read`).
-5. Atualizações: `docker compose -f docker-compose.prod.yml pull && up -d` (ou watchtower). Webhook opcional (o polling já cobre) — guia com Cloudflare Tunnel: [docs/webhook-cloudflare-tunnel.md](docs/webhook-cloudflare-tunnel.md).
+5. Atualizações: automáticas via self-hosted runner (o CI roda o job `deploy` no servidor a cada merge na `main`) ou manuais com `docker compose -f docker-compose.prod.yml pull && up -d`. Webhook opcional (o polling já cobre) — guia com Cloudflare Tunnel: [docs/webhook-cloudflare-tunnel.md](docs/webhook-cloudflare-tunnel.md).
 
 ## Documentação
 

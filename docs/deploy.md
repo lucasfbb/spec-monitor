@@ -93,24 +93,51 @@ Pronto. A partir daí ele se atualiza sozinho a cada `SYNC_INTERVAL_MINUTES`.
 
 Quando eu (ou você) fizer merge de algo na `main`, o CI publica imagens novas (backend e frontend) no GHCR. **O `up -d` NÃO baixa versão nova sozinho** — merge publica no registry, não no servidor.
 
-**Automático (watchtower — já vem ligado no compose):** o serviço `watchtower` confere o GHCR a cada 5 min e, quando aparece imagem nova de backend/frontend, puxa e recria só esses containers. Você não faz nada. Ele age **apenas** nos serviços do spec-monitor (escopo por label) — não encosta nos seus outros containers do homelab.
+**Automático (self-hosted runner — recomendado):** um runner do GitHub Actions instalado no seu servidor executa o job `deploy` do CI assim que as imagens sobem. Ele faz `git pull` do clone fixo, `docker compose pull` e `up -d` — deploy na hora do merge, com log visível na aba **Actions** do repo. Como o runner faz conexão **de saída** ao GitHub, não precisa de IP público nem porta aberta (combina com o Cloudflare Tunnel). Configuração única na próxima seção.
 
-Pré-requisito da parte automática: o watchtower precisa do seu login no GHCR para baixar as imagens privadas. Ele lê o `config.json` do `docker login` que você fez no Passo 1. Se você usa `sudo docker` (login em `/root/.docker`), defina no `.env`:
-
-```
-DOCKER_CONFIG_DIR=/root/.docker
-```
-
-Conferir se está atualizando: `docker compose -f docker-compose.prod.yml logs -f watchtower`.
-
-**Manual (quando quiser forçar na hora, sem esperar os 5 min):**
+**Manual (quando quiser forçar sem depender do runner):**
 
 ```bash
+cd ~/spec-monitor
+git pull
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-> Não quer atualização automática? Comente o serviço `watchtower` no compose e use só o comando manual acima.
+---
+
+## Configurar o self-hosted runner (uma vez só)
+
+O job `deploy` do CI roda em `runs-on: [self-hosted, homelab]` — ou seja, num runner que **você** instala no servidor. Passos:
+
+**1. Garanta o clone fixo e o `.env` no home do usuário do runner.** O job opera em `~/spec-monitor`. Se você seguiu o Passo 2 clonando aí, já está. O `.env` (com `POSTGRES_PASSWORD` etc.) fica nesse diretório e **não** é tocado pelo deploy (é gitignored; o job usa `git reset --hard`, que não mexe em arquivos não-rastreados).
+
+**2. Registre o runner** (GitHub → repo **spec-monitor** → **Settings → Actions → Runners → New self-hosted runner** → Linux). O GitHub mostra os comandos exatos com o token; ao rodar o `./config.sh`, quando pedir os **labels**, adicione `homelab`:
+
+```bash
+# (exemplo — use o token que o GitHub te der na tela)
+mkdir -p ~/actions-runner && cd ~/actions-runner
+curl -o actions-runner.tar.gz -L https://github.com/actions/runner/releases/download/vX.Y.Z/actions-runner-linux-x64-X.Y.Z.tar.gz
+tar xzf actions-runner.tar.gz
+./config.sh --url https://github.com/lucasfbb/spec-monitor --token SEU_TOKEN --labels homelab
+```
+
+**3. Instale como serviço** (sobe sozinho no boot):
+
+```bash
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+
+**4. Docker sem sudo para o usuário do runner** (o job chama `docker` direto):
+
+```bash
+sudo usermod -aG docker $USER   # depois: sair e entrar na sessão, ou reiniciar o serviço do runner
+```
+
+Pronto. No próximo merge na `main`, a aba **Actions** mostra o job `deploy` rodando no seu runner e o stack se atualiza sozinho. O login no GHCR dentro do job usa o `GITHUB_TOKEN` automático (escopo `packages: read`), então nem depende do `docker login` manual do Passo 1 para atualizar.
+
+> **Ordem importa:** registre o runner **antes** de mergear a versão com o job `deploy`. Sem um runner com o label `homelab` ativo, o job fica na fila esperando (não falha, mas não conclui).
 
 ---
 
