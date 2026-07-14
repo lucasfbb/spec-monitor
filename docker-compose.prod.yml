@@ -6,8 +6,8 @@
 #   4. Aponte um hostname do Cloudflare Tunnel para http://localhost:8111
 #      (o Caddy junta frontend + API numa origem só — ver docs/webhook e deploy).
 #
-# Atualização: docker compose -f docker-compose.prod.yml pull && up -d
-# (ou descomente o watchtower no fim do arquivo).
+# Atualização: automática via self-hosted runner (job "deploy" do CI) assim que
+# as imagens sobem no GHCR — ver docs/deploy.md. Manual: pull && up -d.
 services:
   caddy:
     image: caddy:2-alpine
@@ -29,17 +29,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    labels:
-      # Só serviços com este label são atualizados pelo watchtower (abaixo).
-      - "com.centurylinklabs.watchtower.enable=true"
     restart: unless-stopped
 
   frontend:
     image: ghcr.io/lucasfbb/spec-monitor-frontend:latest
     depends_on:
       - backend
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     restart: unless-stopped
 
   postgres:
@@ -55,22 +50,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
-
-  # Atualização automática: confere o GHCR a cada 5 min e, se houver imagem
-  # nova de backend/frontend, puxa e recria só esses containers.
-  #   --label-enable  → age SÓ nos serviços com o label watchtower.enable=true
-  #                     (não toca nos seus outros containers do homelab).
-  #   --cleanup       → remove a imagem antiga após atualizar (economiza disco).
-  # Auth no GHCR (imagens privadas): monta o config.json do seu `docker login`.
-  # Ajuste DOCKER_CONFIG_DIR no .env se o login estiver em /root/.docker
-  # (ex.: se você usa `sudo docker`). Default: ~/.docker do usuário atual.
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${DOCKER_CONFIG_DIR:-~/.docker}/config.json:/config.json:ro
-    command: --label-enable --cleanup --interval 300
     restart: unless-stopped
 
 volumes:
