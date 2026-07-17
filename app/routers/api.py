@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app.models import (
+    Checkpoint,
     Project,
     ProjectMember,
     SpecFile,
@@ -101,6 +102,20 @@ def _status_dict(s: StatusSnapshot) -> dict:
         "commitDate": _iso(s.commit_date),
         "commitMessage": s.commit_message,
         "content": s.content,
+    }
+
+
+def _checkpoint_dict(c: Checkpoint) -> dict:
+    return {
+        "id": str(c.id),
+        "projectId": str(c.project_id),
+        "path": c.path,
+        "number": c.number,
+        "title": c.title or c.path,
+        "date": _iso(c.checkpoint_date) or _iso(c.commit_date),
+        "commitSha": c.commit_sha,
+        "commitDate": _iso(c.commit_date),
+        "content": c.content,
     }
 
 
@@ -236,11 +251,17 @@ def get_project_detail(
         .order_by(desc(SpecVersion.commit_date))
         .limit(12)
     ).all()
+    checkpoints = db.scalars(
+        select(Checkpoint)
+        .where(Checkpoint.project_id == project.id)
+        .order_by(desc(Checkpoint.number), desc(Checkpoint.commit_date))
+    ).all()
     _, last_log = _sync_status(db, project.id)
     return {
         "project": _project_dict(db, project),
         "latestStatus": _status_dict(latest_status) if latest_status else None,
         "specs": [_spec_dict(s) for s in specs],
+        "checkpoints": [_checkpoint_dict(c) for c in checkpoints],
         "recentActivity": [
             {
                 "date": _iso(v.commit_date),

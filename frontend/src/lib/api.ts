@@ -68,10 +68,23 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface Checkpoint {
+  id: string;
+  projectId: string;
+  path: string;
+  number: number;
+  title: string;
+  date: string | null;
+  commitSha: string;
+  commitDate: string | null;
+  content: string;
+}
+
 export interface ProjectDetail {
   project: Project;
   latestStatus: StatusSnapshot | null;
   specs: SpecFile[];
+  checkpoints: Checkpoint[];
   recentActivity: ActivityItem[];
   lastSync: { startedAt: string | null; ok: boolean; message: string } | null;
 }

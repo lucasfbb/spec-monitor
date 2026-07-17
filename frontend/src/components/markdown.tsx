@@ -32,11 +32,36 @@ function statusClass(text: string): string {
   return "";
 }
 
+// Fallback por palavra (só em linhas de TABELA — decisões costumam usar texto
+// puro tipo "Aberta"/"Consolidada"/"Bloqueada"). Não vale para listas: texto
+// corrido menciona essas palavras sem que sejam o estado do item.
+const WORD_TINTS: Array<{ pattern: RegExp; className: string }> = [
+  { pattern: /\b(bloquead[ao]s?|blocked)\b/i, className: "status-row-red" },
+  {
+    pattern: /\b(consolidad[ao]s?|conclu[íi]d[ao]s?|resolvid[ao]s?|entregues?|done|feit[ao]s?)\b/i,
+    className: "status-row-green",
+  },
+  {
+    pattern: /\b(abert[ao]s?|pendentes?|em andamento|em an[áa]lise|parcial|aguardando)\b/i,
+    className: "status-row-amber",
+  },
+];
+
+function rowStatusClass(text: string): string {
+  const byEmoji = statusClass(text);
+  if (byEmoji) return byEmoji;
+  for (const { pattern, className } of WORD_TINTS) {
+    if (pattern.test(text)) return className;
+  }
+  return "";
+}
+
 const components: Components = {
-  // Linhas de tabela (decisões, status por spec): fundo tingido pelo status.
-  // Cabeçalho não tem emoji, então nunca é tingido.
+  // Linhas de tabela (decisões, status por spec): fundo tingido pelo status —
+  // por emoji da convenção ou, na falta dele, por palavra de estado.
+  // Cabeçalho não tem marcador, então nunca é tingido.
   tr({ node, children, ...props }) {
-    const cls = statusClass(hastText(node));
+    const cls = rowStatusClass(hastText(node));
     return (
       <tr className={cls || undefined} {...props}>
         {children}
