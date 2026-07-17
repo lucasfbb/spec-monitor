@@ -45,6 +45,9 @@ class Project(Base):
     members: Mapped[list["ProjectMember"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    checkpoints: Mapped[list["Checkpoint"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class ProjectMember(Base):
@@ -112,6 +115,30 @@ class StatusSnapshot(Base):
     content: Mapped[str] = mapped_column(Text)
 
     project: Mapped[Project] = relationship(back_populates="status_snapshots")
+
+
+class Checkpoint(Base):
+    """Checkpoint de progresso (convenção `docs/checkpoints/AAAA-MM-DD-checkpoint-NN.md`).
+
+    Diferente das specs, checkpoint é histórico imutável por convenção — então
+    guardamos só a versão mais recente de cada arquivo (edições são raras e a
+    linha do tempo é dos checkpoints entre si, não das versões de um deles).
+    """
+
+    __tablename__ = "checkpoints"
+    __table_args__ = (UniqueConstraint("project_id", "path"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    path: Mapped[str] = mapped_column(String(500))
+    number: Mapped[int] = mapped_column(default=0)  # NN do nome do arquivo
+    title: Mapped[str] = mapped_column(String(500), default="")
+    checkpoint_date: Mapped[datetime | None] = mapped_column(default=None)  # AAAA-MM-DD do nome
+    commit_sha: Mapped[str] = mapped_column(String(64), default="")
+    commit_date: Mapped[datetime | None] = mapped_column(default=None)
+    content: Mapped[str] = mapped_column(Text, default="")
+
+    project: Mapped[Project] = relationship(back_populates="checkpoints")
 
 
 class SyncLog(Base):

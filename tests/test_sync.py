@@ -32,7 +32,7 @@ def _commit(sha: str, date: str, message: str) -> dict:
     }
 
 
-def _mock_github(respx_mock, repo: str, spec_v2: bool = False):
+def _mock_github(respx_mock, repo: str, spec_v2: bool = False, checkpoints: bool = False):
     # Histórico do STATUS.md
     respx_mock.get(
         f"https://api.github.com/repos/{repo}/commits",
@@ -42,6 +42,46 @@ def _mock_github(respx_mock, repo: str, spec_v2: bool = False):
             200, json=[_commit("aaa111", "2026-07-10T12:00:00Z", "atualiza status")]
         )
     )
+
+    # Pasta de checkpoints (convenção docs/checkpoints). Sem a flag: 404 —
+    # projeto sem linha do tempo, sync segue normal.
+    if not checkpoints:
+        respx_mock.get(f"https://api.github.com/repos/{repo}/contents/docs/checkpoints").mock(
+            return_value=Response(404)
+        )
+    else:
+        respx_mock.get(f"https://api.github.com/repos/{repo}/contents/docs/checkpoints").mock(
+            return_value=Response(
+                200,
+                json=[
+                    {
+                        "name": "TEMPLATE.md",
+                        "path": "docs/checkpoints/TEMPLATE.md",
+                        "type": "file",
+                    },
+                    {
+                        "name": "2026-07-12-checkpoint-01.md",
+                        "path": "docs/checkpoints/2026-07-12-checkpoint-01.md",
+                        "type": "file",
+                    },
+                ],
+            )
+        )
+        respx_mock.get(
+            f"https://api.github.com/repos/{repo}/commits",
+            params={"path": "docs/checkpoints/2026-07-12-checkpoint-01.md"},
+        ).mock(
+            return_value=Response(
+                200, json=[_commit("ddd444", "2026-07-12T15:00:00Z", "checkpoint #01")]
+            )
+        )
+        respx_mock.get(
+            f"https://api.github.com/repos/{repo}/contents/docs/checkpoints/2026-07-12-checkpoint-01.md"
+        ).mock(
+            return_value=Response(
+                200, json=_content_body("# Checkpoint #01 — fundação\n\nTudo de pé.")
+            )
+        )
     respx_mock.get(f"https://api.github.com/repos/{repo}/contents/STATUS.md").mock(
         return_value=Response(200, json=_content_body("# STATUS\n\nEtapa A em andamento"))
     )
@@ -122,6 +162,29 @@ async def test_sync_e_idempotente_e_detecta_nova_versao(db):
     ).all()
     assert [v.commit_sha for v in versions] == ["bbb222", "ccc333"]
     assert db.query(StatusSnapshot).filter_by(project_id=project.id).count() == 1
+
+
+async def test_sync_checkpoints_cria_linha_do_tempo(db):
+    from app.models import Checkpoint
+
+    project = Project(name="ComCheckpoints", repo="lucas/com-checkpoints")
+    db.add(project)
+    db.commit()
+
+    with respx.mock(assert_all_called=False) as respx_mock:
+        _mock_github(respx_mock, "lucas/com-checkpoints", checkpoints=True)
+        log = await sync_project(db, project)
+        # Segunda rodada: nada muda (idempotente — mesmo commit_sha).
+        await sync_project(db, project)
+
+    assert log.ok, log.message
+    rows = db.query(Checkpoint).filter_by(project_id=project.id).all()
+    assert len(rows) == 1  # TEMPLATE.md ignorado
+    cp = rows[0]
+    assert cp.number == 1
+    assert cp.title == "Checkpoint #01 — fundação"
+    assert cp.checkpoint_date is not None and cp.checkpoint_date.day == 12
+    assert cp.commit_sha == "ddd444"
 
 
 def test_webhook_exige_assinatura_valida(client):

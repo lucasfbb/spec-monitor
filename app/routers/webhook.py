@@ -57,7 +57,9 @@ async def github_webhook(request: Request, background: BackgroundTasks):
     for commit in payload.get("commits", []):
         touched += commit.get("added", []) + commit.get("modified", []) + commit.get("removed", [])
     relevant = any(
-        path == project.status_path or path.startswith(project.specs_dir.rstrip("/") + "/")
+        path == project.status_path
+        or path.startswith(project.specs_dir.rstrip("/") + "/")
+        or path.startswith("docs/checkpoints/")  # linha do tempo (convenção)
         for path in touched
     )
     if not relevant and touched:

@@ -7,6 +7,7 @@ import { Markdown } from "@/components/markdown";
 import { ErrorState, LoadingState } from "@/components/query-states";
 import { ProjectMembers } from "@/components/project-members";
 import { SpecViewerModal } from "@/components/spec-viewer-modal";
+import { CheckpointTimeline } from "@/components/checkpoint-timeline";
 import { deleteProject, getMe, getProjectDetail, syncProject } from "@/lib/api";
 import { formatDate, formatDateTime, formatRelative } from "@/lib/format";
 
@@ -67,7 +68,7 @@ function ProjectPage() {
     );
   }
 
-  const { project, specs, latestStatus: status, recentActivity: activity } = data;
+  const { project, specs, checkpoints, latestStatus: status, recentActivity: activity } = data;
 
   return (
     <AppShell>
@@ -223,6 +224,8 @@ function ProjectPage() {
               ))}
             </ul>
           </div>
+
+          <CheckpointTimeline checkpoints={checkpoints ?? []} />
 
           {/* Activity */}
           <div className="rounded-lg border border-border bg-card">
