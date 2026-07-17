@@ -254,4 +254,105 @@
   & tbody tr:hover {
     background: color-mix(in oklab, var(--color-primary) 4%, transparent);
   }
+
+  /*
+   * Status-aware rows (tabelas e listas do STATUS.md).
+   * As classes são aplicadas pelo componente Markdown a partir do emoji da
+   * convenção: fundo tingido + faixa de cor à esquerda para leitura rápida.
+   * O seletor com classe tem prioridade sobre o :hover genérico acima.
+   */
+  & tbody tr.status-row-green,
+  & tbody tr.status-row-amber,
+  & tbody tr.status-row-orange,
+  & tbody tr.status-row-red,
+  & tbody tr.status-row-neutral {
+    & td:first-child {
+      border-left-width: 3px;
+      border-left-style: solid;
+    }
+  }
+
+  & tbody tr.status-row-green {
+    background: color-mix(in oklab, var(--color-success) 11%, transparent);
+    & td:first-child {
+      border-left-color: var(--color-success);
+    }
+  }
+  & tbody tr.status-row-green:hover {
+    background: color-mix(in oklab, var(--color-success) 17%, transparent);
+  }
+
+  & tbody tr.status-row-amber {
+    background: color-mix(in oklab, var(--color-warning) 12%, transparent);
+    & td:first-child {
+      border-left-color: var(--color-warning);
+    }
+  }
+  & tbody tr.status-row-amber:hover {
+    background: color-mix(in oklab, var(--color-warning) 18%, transparent);
+  }
+
+  & tbody tr.status-row-orange {
+    background: color-mix(in oklab, oklch(0.7 0.17 55) 13%, transparent);
+    & td:first-child {
+      border-left-color: oklch(0.7 0.17 55);
+    }
+  }
+  & tbody tr.status-row-orange:hover {
+    background: color-mix(in oklab, oklch(0.7 0.17 55) 19%, transparent);
+  }
+
+  & tbody tr.status-row-red {
+    background: color-mix(in oklab, var(--color-destructive) 11%, transparent);
+    & td:first-child {
+      border-left-color: var(--color-destructive);
+    }
+  }
+  & tbody tr.status-row-red:hover {
+    background: color-mix(in oklab, var(--color-destructive) 17%, transparent);
+  }
+
+  & tbody tr.status-row-neutral {
+    background: color-mix(in oklab, var(--color-muted-foreground) 9%, transparent);
+    & td:first-child {
+      border-left-color: var(--color-muted-foreground);
+    }
+  }
+  & tbody tr.status-row-neutral:hover {
+    background: color-mix(in oklab, var(--color-muted-foreground) 14%, transparent);
+  }
+
+  /* Itens de lista com marcador de status (ex.: próximos passos, decisões
+     em bullets): faixa de cor à esquerda, sem mexer em listas comuns. */
+  & li.status-row-green,
+  & li.status-row-amber,
+  & li.status-row-orange,
+  & li.status-row-red,
+  & li.status-row-neutral {
+    list-style: none;
+    margin-left: -1.4rem;
+    padding: 0.15rem 0.6rem;
+    border-left: 3px solid transparent;
+    border-radius: 0 4px 4px 0;
+  }
+  & li.status-row-green {
+    border-left-color: var(--color-success);
+    background: color-mix(in oklab, var(--color-success) 9%, transparent);
+  }
+  & li.status-row-amber {
+    border-left-color: var(--color-warning);
+    background: color-mix(in oklab, var(--color-warning) 10%, transparent);
+  }
+  & li.status-row-orange {
+    border-left-color: oklch(0.7 0.17 55);
+    background: color-mix(in oklab, oklch(0.7 0.17 55) 11%, transparent);
+  }
+  & li.status-row-red {
+    border-left-color: var(--color-destructive);
+    background: color-mix(in oklab, var(--color-destructive) 9%, transparent);
+  }
+  & li.status-row-neutral {
+    border-left-color: var(--color-muted-foreground);
+    background: color-mix(in oklab, var(--color-muted-foreground) 8%, transparent);
+  }
 }
