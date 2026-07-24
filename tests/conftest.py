@@ -18,9 +18,19 @@ from app.db import Base, SessionLocal, engine  # noqa: E402
 from app.main import app, seed_admin  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _reset_db():
+    # Banco limpo por teste. autouse + roda antes das fixtures pedidas pelo teste,
+    # então o lifespan do `client` (que semeia o admin) roda DEPOIS da limpeza.
+    # Sem isso, linhas de um teste vazam para o próximo (contagens globais,
+    # e-mails únicos) e quebram de forma dependente da ordem de execução.
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    yield
+
+
 @pytest.fixture()
 def db():
-    Base.metadata.create_all(engine)
     session = SessionLocal()
     try:
         yield session

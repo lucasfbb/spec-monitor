@@ -43,7 +43,7 @@ async def _poll_loop() -> None:
         with SessionLocal() as db:
             projects = db.scalars(select(Project)).all()
             for project in projects:
-                await sync_project(db, project)
+                await sync_project(db, project, notify=True)
 
 
 @asynccontextmanager

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { SyncBadge } from "@/components/sync-badge";
+import { StaleBadge, SyncBadge } from "@/components/sync-badge";
 import { ErrorState, LoadingState } from "@/components/query-states";
 import { getMe, listProjects } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
@@ -95,7 +95,10 @@ function Dashboard() {
                 </h3>
                 <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{p.repo}</p>
               </div>
-              <SyncBadge status={p.lastSyncOk} />
+              <div className="flex flex-col items-end gap-1.5">
+                <SyncBadge status={p.lastSyncOk} />
+                <StaleBadge staleness={p.staleness} />
+              </div>
             </div>
 
             <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4 text-xs">
