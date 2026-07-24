@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
+from app.health import status_staleness
 from app.models import (
     Checkpoint,
     Project,
@@ -56,6 +57,17 @@ def _sync_status(db: Session, project_id: int) -> tuple[str, SyncLog | None]:
     return ("ok" if last.ok else "failed"), last
 
 
+def _staleness_dict(db: Session, project: Project) -> dict:
+    s = status_staleness(db, project, get_settings().status_stale_days)
+    return {
+        "stale": s["stale"],
+        "daysBehind": s["days_behind"],
+        "thresholdDays": s["threshold_days"],
+        "lastStatusUpdate": _iso(s["last_status_update"]),
+        "lastActivityAt": _iso(s["last_activity_at"]),
+    }
+
+
 def _project_dict(db: Session, project: Project) -> dict:
     status, last = _sync_status(db, project.id)
     return {
@@ -68,6 +80,7 @@ def _project_dict(db: Session, project: Project) -> dict:
         "lastSyncAt": _iso(last.started_at) if last else None,
         "lastSyncOk": status,
         "specsCount": len(project.specs),
+        "staleness": _staleness_dict(db, project),
     }
 
 
@@ -309,7 +322,7 @@ async def manual_sync(
     project_id: str, admin: User = Depends(require_admin_api), db: Session = Depends(get_db)
 ):
     project = _get_project_or_404(db, project_id)
-    await sync_project(db, project)
+    await sync_project(db, project, notify=True)
     return _project_dict(db, project)
 
 

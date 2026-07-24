@@ -12,6 +12,16 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 export type SyncStatus = "ok" | "failed" | "never";
 
+// STATUS defasado: STATUS.md ficou para trás da atividade recente das specs.
+// Derivado no backend (não persistido) a partir das datas de commit.
+export interface Staleness {
+  stale: boolean;
+  daysBehind: number | null;
+  thresholdDays: number;
+  lastStatusUpdate: string | null;
+  lastActivityAt: string | null;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -22,6 +32,7 @@ export interface Project {
   lastSyncAt: string | null;
   lastSyncOk: SyncStatus;
   specsCount: number;
+  staleness: Staleness;
 }
 
 export interface SpecFile {

@@ -19,8 +19,25 @@ class Settings(BaseSettings):
 
     sync_interval_minutes: int = 10
 
+    # STATUS defasado: se a spec/checkpoint mais recente está há >= N dias à
+    # frente do último commit no STATUS.md, o projeto é sinalizado como defasado
+    # (o painel mostra o badge; a notificação de mudança inclui um aviso).
+    status_stale_days: int = 14
+
     # Vazio = endpoint de webhook desativado (polling continua funcionando).
     github_webhook_secret: str = ""
+
+    # Notificações por e-mail (SMTP). Vazio SMTP_HOST = notificações desativadas
+    # (o sync segue normal), mesma lógica do webhook sem segredo. Telegram e
+    # outros canais ficam para depois (ver STATUS, decisão M1).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""  # remetente; se vazio, usa smtp_user
+    smtp_use_tls: bool = True
+    # Base pública para montar links nos e-mails (ex.: https://spec.exemplo.com).
+    app_base_url: str = ""
 
     session_cookie_name: str = "spec_monitor_session"
     session_max_age_seconds: int = 8 * 60 * 60
@@ -37,6 +54,11 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def notifications_enabled(self) -> bool:
+        """SMTP configurado (host presente). Sem isso, notificações são no-op."""
+        return bool(self.smtp_host.strip())
 
 
 @lru_cache

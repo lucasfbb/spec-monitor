@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { SyncStatus } from "@/lib/api";
+import type { Staleness, SyncStatus } from "@/lib/api";
 
 export function SyncBadge({ status, className }: { status: SyncStatus; className?: string }) {
   const map: Record<SyncStatus, { label: string; classes: string; dot: string }> = {
@@ -30,6 +30,23 @@ export function SyncBadge({ status, className }: { status: SyncStatus; className
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", it.dot)} />
       {it.label}
+    </span>
+  );
+}
+
+export function StaleBadge({ staleness, className }: { staleness: Staleness; className?: string }) {
+  if (!staleness.stale) return null;
+  const days = staleness.daysBehind;
+  return (
+    <span
+      title={`STATUS.md está ${days ?? "?"} dia(s) atrás da atividade recente das specs`}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning",
+        className,
+      )}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+      STATUS defasado{days != null ? ` · ${days}d` : ""}
     </span>
   );
 }

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.github_client import GitHubClient
 from app.models import Checkpoint, Project, SpecFile, SpecVersion, StatusSnapshot, SyncLog
+from app.notifications import notify_sync_changes
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +40,25 @@ def _first_heading(content: str) -> str:
     return ""
 
 
-async def sync_project(db: Session, project: Project) -> SyncLog:
+async def sync_project(db: Session, project: Project, *, notify: bool = False) -> SyncLog:
+    """Sincroniza um projeto. Com `notify=True`, envia notificação de mudança se
+    algo novo foi detectado (polling e sync manual usam True; a carga inicial na
+    criação usa False para não notificar o histórico inteiro)."""
     log = SyncLog(project_id=project.id)
     client = GitHubClient(project.token)
+    status_changes: list[dict] = []
+    spec_changes: list[dict] = []
+    checkpoint_changes: list[dict] = []
     try:
-        log.new_status_snapshots = await _sync_status(db, project, client)
-        log.new_spec_versions = await _sync_specs(db, project, client)
-        new_checkpoints = await _sync_checkpoints(db, project, client)
+        status_changes = await _sync_status(db, project, client)
+        spec_changes = await _sync_specs(db, project, client)
+        checkpoint_changes = await _sync_checkpoints(db, project, client)
+        log.new_status_snapshots = len(status_changes)
+        log.new_spec_versions = len(spec_changes)
         log.message = (
-            f"{log.new_spec_versions} versão(ões) de spec, "
-            f"{log.new_status_snapshots} snapshot(s) de STATUS, "
-            f"{new_checkpoints} checkpoint(s)"
+            f"{len(spec_changes)} versão(ões) de spec, "
+            f"{len(status_changes)} snapshot(s) de STATUS, "
+            f"{len(checkpoint_changes)} checkpoint(s)"
         )
     except Exception as exc:  # registra a falha em vez de derrubar o poller
         logger.exception("Falha ao sincronizar projeto %s", project.repo)
@@ -59,17 +68,30 @@ async def sync_project(db: Session, project: Project) -> SyncLog:
         await client.aclose()
     db.add(log)
     db.commit()
+
+    if notify and log.ok and (status_changes or spec_changes or checkpoint_changes):
+        # Notificar nunca deve derrubar o sync — falha aqui é só logada.
+        try:
+            notify_sync_changes(
+                db,
+                project,
+                spec_changes=spec_changes,
+                status_changes=status_changes,
+                checkpoint_changes=checkpoint_changes,
+            )
+        except Exception:
+            logger.exception("Falha ao notificar mudanças de %s", project.repo)
     return log
 
 
-async def _sync_status(db: Session, project: Project, client: GitHubClient) -> int:
+async def _sync_status(db: Session, project: Project, client: GitHubClient) -> list[dict]:
     known = set(
         db.scalars(
             select(StatusSnapshot.commit_sha).where(StatusSnapshot.project_id == project.id)
         )
     )
     commits = await client.list_commits(project.repo, project.status_path, project.branch)
-    new = 0
+    changes: list[dict] = []
     for commit in reversed(commits):  # do mais antigo para o mais novo
         if commit["sha"] in known or commit["date"] is None:
             continue
@@ -85,18 +107,25 @@ async def _sync_status(db: Session, project: Project, client: GitHubClient) -> i
                 content=content,
             )
         )
-        new += 1
+        changes.append(
+            {
+                "type": "status",
+                "commit_sha": commit["sha"],
+                "date": commit["date"],
+                "message": commit["message"],
+            }
+        )
     db.commit()
-    return new
+    return changes
 
 
-async def _sync_checkpoints(db: Session, project: Project, client: GitHubClient) -> int:
+async def _sync_checkpoints(db: Session, project: Project, client: GitHubClient) -> list[dict]:
     """Sincroniza docs/checkpoints/ (linha do tempo). Só a versão mais recente
     de cada arquivo — checkpoint é imutável por convenção. TEMPLATE é ignorado."""
     entries = await client.list_dir(project.repo, CHECKPOINTS_DIR, project.branch)
     if entries is None:  # projeto sem a pasta — sem linha do tempo, sem erro
-        return 0
-    changed = 0
+        return []
+    changes: list[dict] = []
     for entry in entries:
         name = entry.get("name", "")
         if entry.get("type") != "file" or not name.endswith(".md"):
@@ -138,16 +167,23 @@ async def _sync_checkpoints(db: Session, project: Project, client: GitHubClient)
         row.commit_sha = latest["sha"]
         row.commit_date = latest["date"]
         row.content = content
-        changed += 1
+        changes.append(
+            {
+                "type": "checkpoint",
+                "number": row.number,
+                "title": row.title,
+                "date": latest["date"],
+            }
+        )
     db.commit()
-    return changed
+    return changes
 
 
-async def _sync_specs(db: Session, project: Project, client: GitHubClient) -> int:
+async def _sync_specs(db: Session, project: Project, client: GitHubClient) -> list[dict]:
     entries = await client.list_dir(project.repo, project.specs_dir, project.branch)
     if entries is None:
-        return 0
-    new_total = 0
+        return []
+    changes: list[dict] = []
     for entry in entries:
         if entry.get("type") != "file" or not entry.get("name", "").endswith(".md"):
             continue
@@ -181,10 +217,21 @@ async def _sync_specs(db: Session, project: Project, client: GitHubClient) -> in
                     content=content,
                 )
             )
-            new_total += 1
+            title = _first_heading(content) or entry["name"]
+            changes.append(
+                {
+                    "type": "spec",
+                    "title": title,
+                    "path": entry["path"],
+                    "commit_sha": commit["sha"],
+                    "date": commit["date"],
+                    "message": commit["message"],
+                    "author": commit["author"],
+                }
+            )
             if spec.last_updated is None or commit["date"] >= _aware(spec.last_updated):
                 spec.last_updated = commit["date"]
                 spec.latest_sha = commit["sha"]
-                spec.title = _first_heading(content) or entry["name"]
+                spec.title = title
         db.commit()
-    return new_total
+    return changes

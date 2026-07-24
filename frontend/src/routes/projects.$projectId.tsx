@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { SyncBadge } from "@/components/sync-badge";
+import { StaleBadge, SyncBadge } from "@/components/sync-badge";
 import { Markdown } from "@/components/markdown";
 import { ErrorState, LoadingState } from "@/components/query-states";
 import { ProjectMembers } from "@/components/project-members";
@@ -86,6 +86,7 @@ function ProjectPage() {
           <div className="flex items-center gap-3">
             <h1 className="truncate text-2xl font-semibold tracking-tight">{project.name}</h1>
             <SyncBadge status={project.lastSyncOk} />
+            <StaleBadge staleness={project.staleness} />
           </div>
           <a
             href={`https://github.com/${project.repo}`}

@@ -22,7 +22,11 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "respx>=0.21",
-    "ruff>=0.6",
+    # Teto por reprodutibilidade: sem ele o CI instala a última a cada rodada e
+    # muda de regra sozinho (a 0.16 promoveu PIE810/RUF100 ao padrão e deixou o
+    # CI vermelho sem ninguém ter tocado no código). Subir o teto é decisão
+    # deliberada, junto com a adequação às regras novas.
+    "ruff>=0.6,<0.16",
 ]
 
 [tool.setuptools]
