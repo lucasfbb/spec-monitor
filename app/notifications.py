@@ -137,6 +137,18 @@ def send_email(
     settings: Settings, recipients: list[str], subject: str, text_body: str, html_body: str
 ) -> None:
     """Envia via SMTP. Fronteira única com o mundo de e-mail (mockável em teste)."""
+    # smtplib.SMTP(host, ...) só conecta se host for não-vazio; com host vazio o
+    # erro só aparece lá no starttls como "please run connect() first", que não
+    # diz nada sobre a causa real (quase sempre: container criado antes de o .env
+    # ganhar as variáveis de e-mail — env_file é lido na criação do container).
+    host = settings.smtp_host.strip()
+    if not host:
+        raise RuntimeError(
+            "SMTP_HOST está vazio: as notificações não têm servidor para onde enviar. "
+            "Se você acabou de preencher o .env, recrie o container — o env_file é "
+            "lido na criação: docker compose -f docker-compose.prod.yml up -d"
+        )
+
     msg = EmailMessage()
     msg["From"] = settings.smtp_from.strip() or settings.smtp_user
     msg["To"] = ", ".join(recipients)
@@ -144,7 +156,7 @@ def send_email(
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype="html")
 
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+    with smtplib.SMTP(host, settings.smtp_port, timeout=30) as server:
         if settings.smtp_use_tls:
             server.starttls()
         if settings.smtp_user:
