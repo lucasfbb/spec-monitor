@@ -34,13 +34,7 @@ export function SyncBadge({ status, className }: { status: SyncStatus; className
   );
 }
 
-export function StaleBadge({
-  staleness,
-  className,
-}: {
-  staleness: Staleness;
-  className?: string;
-}) {
+export function StaleBadge({ staleness, className }: { staleness: Staleness; className?: string }) {
   if (!staleness.stale) return null;
   const days = staleness.daysBehind;
   return (
