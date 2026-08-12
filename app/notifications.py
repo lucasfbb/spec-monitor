@@ -10,6 +10,7 @@ Só o polling e o sync manual notificam; a carga inicial de um projeto novo NÃO
 (senão o primeiro e-mail listaria todo o histórico como "novidade").
 """
 
+import asyncio
 import logging
 import smtplib
 from datetime import UTC, datetime
@@ -164,7 +165,7 @@ def send_email(
         server.send_message(msg)
 
 
-def notify_sync_changes(
+async def notify_sync_changes(
     db: Session,
     project: Project,
     *,
@@ -173,7 +174,13 @@ def notify_sync_changes(
     checkpoint_changes: list[dict],
 ) -> bool:
     """Compõe e envia o digest. Retorna True se enviou. No-op (False) se SMTP
-    não configurado, sem destinatários, ou sem mudanças."""
+    não configurado, sem destinatários, ou sem mudanças.
+
+    Chamada do poll loop assíncrono. O trabalho de banco (destinatários, digest)
+    é rápido e roda no event loop; só o envio SMTP — que é **bloqueante** (smtplib)
+    e pode travar por dezenas de segundos — vai para uma thread. Rodar o envio
+    direto no loop congelaria o backend inteiro se o SMTP pendurar (foi o que
+    derrubou o serviço quando o SMTP estava mal configurado)."""
     settings = get_settings()
     if not settings.notifications_enabled:
         return False
@@ -192,7 +199,9 @@ def notify_sync_changes(
         settings=settings,
     )
     try:
-        send_email(settings, recipients, subject, text_body, html_body)
+        await asyncio.to_thread(
+            send_email, settings, recipients, subject, text_body, html_body
+        )
         logger.info("Notificação enviada para %d destinatário(s): %s", len(recipients), project.repo)
         return True
     except Exception:
