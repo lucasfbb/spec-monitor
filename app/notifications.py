@@ -10,6 +10,7 @@ Só o polling e o sync manual notificam; a carga inicial de um projeto novo NÃO
 (senão o primeiro e-mail listaria todo o histórico como "novidade").
 """
 
+import asyncio
 import logging
 import smtplib
 from datetime import UTC, datetime
@@ -137,6 +138,18 @@ def send_email(
     settings: Settings, recipients: list[str], subject: str, text_body: str, html_body: str
 ) -> None:
     """Envia via SMTP. Fronteira única com o mundo de e-mail (mockável em teste)."""
+    # smtplib.SMTP(host, ...) só conecta se host for não-vazio; com host vazio o
+    # erro só aparece lá no starttls como "please run connect() first", que não
+    # diz nada sobre a causa real (quase sempre: container criado antes de o .env
+    # ganhar as variáveis de e-mail — env_file é lido na criação do container).
+    host = settings.smtp_host.strip()
+    if not host:
+        raise RuntimeError(
+            "SMTP_HOST está vazio: as notificações não têm servidor para onde enviar. "
+            "Se você acabou de preencher o .env, recrie o container — o env_file é "
+            "lido na criação: docker compose -f docker-compose.prod.yml up -d"
+        )
+
     msg = EmailMessage()
     msg["From"] = settings.smtp_from.strip() or settings.smtp_user
     msg["To"] = ", ".join(recipients)
@@ -144,7 +157,7 @@ def send_email(
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype="html")
 
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+    with smtplib.SMTP(host, settings.smtp_port, timeout=30) as server:
         if settings.smtp_use_tls:
             server.starttls()
         if settings.smtp_user:
@@ -152,7 +165,7 @@ def send_email(
         server.send_message(msg)
 
 
-def notify_sync_changes(
+async def notify_sync_changes(
     db: Session,
     project: Project,
     *,
@@ -161,7 +174,13 @@ def notify_sync_changes(
     checkpoint_changes: list[dict],
 ) -> bool:
     """Compõe e envia o digest. Retorna True se enviou. No-op (False) se SMTP
-    não configurado, sem destinatários, ou sem mudanças."""
+    não configurado, sem destinatários, ou sem mudanças.
+
+    Chamada do poll loop assíncrono. O trabalho de banco (destinatários, digest)
+    é rápido e roda no event loop; só o envio SMTP — que é **bloqueante** (smtplib)
+    e pode travar por dezenas de segundos — vai para uma thread. Rodar o envio
+    direto no loop congelaria o backend inteiro se o SMTP pendurar (foi o que
+    derrubou o serviço quando o SMTP estava mal configurado)."""
     settings = get_settings()
     if not settings.notifications_enabled:
         return False
@@ -180,7 +199,9 @@ def notify_sync_changes(
         settings=settings,
     )
     try:
-        send_email(settings, recipients, subject, text_body, html_body)
+        await asyncio.to_thread(
+            send_email, settings, recipients, subject, text_body, html_body
+        )
         logger.info("Notificação enviada para %d destinatário(s): %s", len(recipients), project.repo)
         return True
     except Exception:

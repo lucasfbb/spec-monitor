@@ -5,11 +5,19 @@ import pytest
 import respx
 
 from app import notifications
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.models import Project, User
 from app.security import hash_password
 from app.sync import sync_project
 from tests.test_sync import _mock_github
+
+
+def test_send_email_com_host_vazio_da_erro_claro():
+    # SMTP_HOST vazio → em vez do críptico "please run connect() first" do
+    # smtplib, um erro que aponta a causa (container criado sem as vars).
+    settings = Settings(smtp_host="")
+    with pytest.raises(RuntimeError, match="SMTP_HOST está vazio"):
+        notifications.send_email(settings, ["a@b.com"], "s", "t", "<p>t</p>")
 
 
 @pytest.fixture()

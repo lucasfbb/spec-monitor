@@ -70,9 +70,11 @@ async def sync_project(db: Session, project: Project, *, notify: bool = False) -
     db.commit()
 
     if notify and log.ok and (status_changes or spec_changes or checkpoint_changes):
-        # Notificar nunca deve derrubar o sync — falha aqui é só logada.
+        # Notificar nunca deve derrubar o sync — falha aqui é só logada. O envio
+        # de e-mail é offloadado para thread dentro de notify_sync_changes, para
+        # não bloquear o event loop do poller.
         try:
-            notify_sync_changes(
+            await notify_sync_changes(
                 db,
                 project,
                 spec_changes=spec_changes,
